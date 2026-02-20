@@ -13,13 +13,14 @@ const institutions = [
   "VIT University",
   "IIT Madras",
   "Agni College Of Technology",
+  "Agni College",
   "Anna University",
   "SafeVoice Org"
 ];
 
 const Registration = () => {
   const navigate = useNavigate();
-  const { register, verifyOtp } = useAuth();
+  const { user, register, verifyOtp } = useAuth();
   const { toast } = useToast();
 
   const [step, setStep] = useState(1);
@@ -57,10 +58,18 @@ const Registration = () => {
     setLoading(true);
     try {
       await verifyOtp(name, email, password, selectedInstitution, otp);
+
+      // Save institution for the dashboard
+      if (selectedInstitution) {
+        localStorage.setItem("user_institution", selectedInstitution);
+      }
+
       toast({
         title: "Registration Successful",
         description: "Your safe identity has been created.",
       });
+
+      // Show the identity success screen
       setStep(4);
     } catch (error: any) {
       toast({
@@ -96,7 +105,9 @@ const Registration = () => {
             <p className="mt-2 text-sm text-muted-foreground">Your anonymous ID has been generated</p>
             <div className="mt-4 rounded-lg border border-safety/30 bg-safety/5 px-6 py-3">
               <p className="text-xs text-muted-foreground">Your Anonymous ID</p>
-              <p className="mt-1 font-display text-lg font-bold text-safety">VICTIM-{Math.floor(1000 + Math.random() * 9000)}</p>
+              <p className="mt-1 font-display text-2xl font-bold text-safety tracking-tight">
+                {user?.victimId || 'SV-WAITING'}
+              </p>
             </div>
             <p className="mt-4 max-w-xs text-xs text-muted-foreground leading-relaxed">
               Your real identity is encrypted and never visible in dashboards or reports per POSH Act Section 16.

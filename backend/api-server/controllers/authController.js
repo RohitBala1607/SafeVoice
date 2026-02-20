@@ -55,11 +55,15 @@ exports.verifyOtp = async (req, res) => {
         }
 
         // 2. OTP is valid, create user from stored data
+        const lakhRandom = Math.floor(100000 + Math.random() * 900000);
+        const victimId = `SV-${lakhRandom}`;
+
         const newUser = new User({
             name: otpRecord.name,
             email: otpRecord.email,
             password_hash: otpRecord.password_hash,
-            institution: otpRecord.institution
+            institution: otpRecord.institution,
+            victimId: victimId
         });
 
         await newUser.save();
@@ -74,7 +78,13 @@ exports.verifyOtp = async (req, res) => {
             message: 'User created successfully',
             userId: newUser._id,
             token,
-            user: { id: newUser._id, name: newUser.name, email: newUser.email, institution: newUser.institution }
+            user: {
+                id: newUser._id,
+                victimId: newUser.victimId,
+                name: newUser.name,
+                email: newUser.email,
+                institution: newUser.institution
+            }
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -90,8 +100,25 @@ exports.login = async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password_hash);
         if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
+        // 🎗️ Migrating Existing Users to standardized SV-ID format if missing
+        if (!user.victimId) {
+            const lakhRandom = Math.floor(100000 + Math.random() * 900000);
+            user.victimId = `SV-${lakhRandom}`;
+            await user.save();
+            console.log(`🎗️ Migrated existing user ${user.email} to new ID: ${user.victimId}`);
+        }
+
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.json({ token, user: { id: user._id, name: user.name, email: user.email, institution: user.institution } });
+        res.json({
+            token,
+            user: {
+                id: user._id,
+                victimId: user.victimId,
+                name: user.name,
+                email: user.email,
+                institution: user.institution
+            }
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

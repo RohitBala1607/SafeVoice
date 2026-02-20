@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { startSOS, stopSOS } from "@/services/sosEngine";
 import {
   Shield,
   EyeOff,
@@ -234,13 +235,11 @@ Sent via Safety SOS System`
 
   const handleTestSOS = () => {
     toast.info("🔴 Live SOS Simulation Started", {
-      description: "Location + WhatsApp alert simulation (no real SMS sent).",
+      description: "Triggering Full Emergency Response and Backend Sync.",
       duration: 4000,
     });
 
-    if (config.whatsappShare) {
-      sendWhatsAppAlertToContacts();
-    }
+    startSOS();
   };
 
   return (

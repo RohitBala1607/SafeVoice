@@ -7,7 +7,31 @@ const Splash = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const timer = setTimeout(() => navigate("/welcome"), 2500);
+    const checkAuth = () => {
+      const userStr = localStorage.getItem("user");
+      const token = localStorage.getItem("token");
+
+      if (userStr && token) {
+        try {
+          const user = JSON.parse(userStr);
+          if (user.role === "institution") {
+            navigate("/institution-dashboard");
+            return;
+          }
+          if (user.role === "authority") {
+            navigate("/authority-dashboard");
+            return;
+          }
+          navigate("/dashboard");
+          return;
+        } catch (e) {
+          console.error("Auth parsing error", e);
+        }
+      }
+      navigate("/welcome");
+    };
+
+    const timer = setTimeout(checkAuth, 2500);
     return () => clearTimeout(timer);
   }, [navigate]);
 

@@ -38,6 +38,26 @@ const Dashboard = () => {
         </motion.div>
       </div>
 
+      {/* Identity Badge */}
+      <div className="mt-3 px-4">
+        <div className="flex items-center justify-between rounded-xl bg-card p-4 border border-border shadow-card">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-safety/10 p-2">
+              <Shield className="h-5 w-5 text-safety" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Secure Identity</p>
+              <p className="font-display text-lg font-bold text-foreground">
+                {user?.victimId || (user?.id ? `SV-${Math.floor(100000 + Math.random() * 900000)}` : "SV-LOADING")}
+              </p>
+            </div>
+          </div>
+          <div className="rounded-full bg-safety/5 px-2 py-1">
+            <span className="text-[10px] font-bold text-safety tracking-tight">VERIFIED ID</span>
+          </div>
+        </div>
+      </div>
+
       {/* Main Actions */}
       <div className="px-4 pt-5">
         <h3 className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Actions</h3>

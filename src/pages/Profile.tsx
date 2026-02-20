@@ -5,8 +5,16 @@ import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 
+import { useAuth } from "@/context/AuthContext";
+
 const Profile = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/role-selection");
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background pb-20">
@@ -25,7 +33,9 @@ const Profile = () => {
             </div>
             <div>
               <p className="text-xs text-primary-foreground/60">Anonymous Identity</p>
-              <p className="font-display text-xl font-bold text-primary-foreground">VICTIM-4821</p>
+              <p className="font-display text-xl font-bold text-primary-foreground">
+                {user?.victimId || (user?.id ? `SV-${Math.floor(100000 + Math.random() * 900000)}` : "SV-LOADING")}
+              </p>
             </div>
           </div>
           <div className="mt-4 flex items-center gap-2 rounded-lg bg-primary-foreground/10 px-3 py-2">
@@ -46,7 +56,7 @@ const Profile = () => {
               <Building2 className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-[10px] text-muted-foreground">Institution</p>
-                <p className="text-sm font-medium text-foreground">Delhi University</p>
+                <p className="text-sm font-medium text-foreground">{user?.institution || "SafeVoice Network"}</p>
               </div>
             </div>
           </motion.div>
@@ -84,7 +94,7 @@ const Profile = () => {
 
         <Button
           variant="outline"
-          onClick={() => navigate("/")}
+          onClick={handleLogout}
           className="mt-8 w-full rounded-xl border-emergency/30 py-5 text-sm font-medium text-emergency hover:bg-emergency/5"
         >
           <LogOut className="mr-2 h-4 w-4" />

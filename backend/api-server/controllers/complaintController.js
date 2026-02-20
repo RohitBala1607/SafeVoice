@@ -1,72 +1,75 @@
 const Complaint = require('../models/Complaint');
+const mongoose = require('mongoose');
 const axios = require('axios');
 
 exports.createComplaint = async (req, res) => {
-    const { id, victim_id, institution, type, description, location, has_audio, has_sos, date } = req.body;
+    const { victim_id, institution, type, description, location, hasAudio, hasSOS, date, evidence } = req.body;
 
     try {
-        // 1. Create complaint instance
-        const newComplaint = new Complaint({
-            complaintId: id,
-            victimId: victim_id,
-            institution,
-            type,
-            description,
-            location,
-            has_audio,
-            has_sos,
-            date
-        });
+        console.log("Incoming complaint request body:", req.body);
 
-        // 2. Call AI Service for priority prediction
-        let aiPriority = 'medium'; // Default
-        try {
-            const aiResponse = await axios.post(`${process.env.AI_SERVICE_URL}/predict`, {
-                text: description
-            });
-
-            const weight = aiResponse.data.weight;
-            if (typeof weight === 'string') {
-                aiPriority = weight.toLowerCase();
-            } else if (typeof weight === 'number') {
-                if (weight > 70) aiPriority = 'high';
-                else if (weight > 40) aiPriority = 'medium';
-                else aiPriority = 'low';
-            }
-        } catch (aiErr) {
-            console.error('AI Service Error:', aiErr.message);
+        if (!victim_id) {
+            console.error("Missing victim_id");
+            return res.status(400).json({ message: "Victim Identity Required" });
         }
 
-        // 3. Set priority and save
+        const complaintIdValue = "CMP-" + Date.now();
+        console.log("Calculated complaintIdValue:", complaintIdValue);
+
+        const complaintData = {
+            complaintId: complaintIdValue,
+            victimId: victim_id,
+            institution: institution,
+            type: type,
+            description: description,
+            location: location,
+            hasAudio: !!hasAudio,
+            hasSOS: !!hasSOS,
+            date: date,
+            evidence: evidence || []
+        };
+
+        console.log("Construction data for new Complaint:", complaintData);
+
+        const newComplaint = new Complaint(complaintData);
+
+        // AI Priority (Optional)
+        let aiPriority = "medium";
+
+        if (process.env.AI_SERVICE_URL) {
+            try {
+                const aiResponse = await axios.post(
+                    `${process.env.AI_SERVICE_URL}/predict`,
+                    { text: description }
+                );
+
+                const weight = aiResponse.data.weight;
+
+                if (typeof weight === "number") {
+                    if (weight > 70) aiPriority = "high";
+                    else if (weight > 40) aiPriority = "medium";
+                    else aiPriority = "low";
+                }
+            } catch (err) {
+                console.error("AI Service Error:", err.message);
+            }
+        }
+
         newComplaint.priority = aiPriority;
+
         await newComplaint.save();
 
         res.status(201).json({
-            message: 'Complaint created and prioritized',
-            id,
-            predictedPriority: aiPriority
-        });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-};
-
-exports.getComplaintsByInstitution = async (req, res) => {
-    const { institution } = req.params;
-    try {
-        const complaints = await Complaint.find({ institution });
-
-        // Manual sort by priority
-        const priorityOrder = { 'emergency': 0, 'high': 1, 'medium': 2, 'low': 3 };
-        complaints.sort((a, b) => {
-            if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-                return priorityOrder[a.priority] - priorityOrder[b.priority];
-            }
-            return new Date(b.created_at) - new Date(a.created_at);
+            message: "Complaint created successfully",
+            complaintId: complaintIdValue,
+            priority: aiPriority
         });
 
-        res.json(complaints);
     } catch (err) {
+        console.error("Full Complaint Error Object:", err);
+        if (err.errors) {
+            console.error("Mongoose Validation Errors:", err.errors);
+        }
         res.status(500).json({ message: err.message });
     }
 };
@@ -80,12 +83,11 @@ exports.getTransparencyData = async (req, res) => {
                     total: { $sum: 1 },
                     resolved: { $sum: { $cond: [{ $eq: ["$status", "closed"] }, 1, 0] } },
                     reviewing: { $sum: { $cond: [{ $in: ["$status", ["under_review", "verified"]] }, 1, 0] } },
-                    // Placeholder for avgDays as it depends on status changes tracking which we don't have yet
-                    // But we can calculate a pseudo score based on resolved/total
                 }
             },
             {
                 $project: {
+                    _id: 0,
                     name: "$_id",
                     total: 1,
                     resolved: 1,
@@ -99,8 +101,31 @@ exports.getTransparencyData = async (req, res) => {
                 }
             }
         ]);
-        res.json(stats);
+        res.status(200).json(stats);
     } catch (err) {
+        console.error("Transparency Data Error:", err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+exports.getComplaintsByInstitution = async (req, res) => {
+    const { institution } = req.params;
+    try {
+        const complaints = await Complaint.find({ institution }).sort({ created_at: -1 });
+        res.status(200).json(complaints);
+    } catch (err) {
+        console.error("Fetch by Institution Error:", err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+exports.getComplaintsByVictim = async (req, res) => {
+    const { victimId } = req.params;
+    try {
+        const complaints = await Complaint.find({ victimId }).sort({ created_at: -1 });
+        res.status(200).json(complaints);
+    } catch (err) {
+        console.error("Fetch by Victim Error:", err);
         res.status(500).json({ message: err.message });
     }
 };

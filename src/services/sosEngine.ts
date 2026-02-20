@@ -1,6 +1,6 @@
 import { toast } from "sonner";
-
 import { audioStorage } from "@/lib/audio-storage";
+import api from "@/services/api";
 
 interface SafetyConfig {
   sosEnabled: boolean;
@@ -20,6 +20,7 @@ interface EmergencyContact {
 let trackingInterval: any = null;
 let mediaRecorder: MediaRecorder | null = null;
 let audioChunks: Blob[] = [];
+let currentPublicId: string | null = null;
 
 export const startSOS = async () => {
   const defaultConfig: SafetyConfig = {
@@ -49,7 +50,6 @@ export const startSOS = async () => {
 
   console.log("🚨 SOS ACTIVATED BY GESTURE");
 
-  // 1️⃣ Get Location First
   if (!navigator.geolocation) {
     alert("Location not supported");
     return;
@@ -57,73 +57,80 @@ export const startSOS = async () => {
 
   navigator.geolocation.getCurrentPosition(async (position) => {
     const lat = position.coords.latitude;
-    const long = position.coords.longitude;
-    const mapsLink = `https://maps.google.com/?q=${lat},${long}`;
+    const lng = position.coords.longitude;
+    const mapsLink = `https://maps.google.com/?q=${lat},${lng}`;
 
-    // 🔴 BROADCAST SOS TO DASHBOARDS (Dynamic System)
-    const victimId = localStorage.getItem("user_id") || `VICTIM-${Math.floor(1000 + Math.random() * 9000)}`;
-    const institution = localStorage.getItem("user_institution") || "Delhi University";
+    const rawUser = localStorage.getItem("user");
+    const user = rawUser ? JSON.parse(rawUser) : null;
+    const victimId = user?.victimId || user?.id || `VICTIM-${Math.floor(1000 + Math.random() * 9000)}`;
+    const institution = user?.institution || localStorage.getItem("user_institution") || "SafeVoice Institution";
 
-    console.log("📍 Location Found:", lat, long);
-    console.log("📋 SOS Config:", config);
-    console.log("👥 Contacts:", contacts.length);
+    console.log("📍 Initial Location:", lat, lng);
 
-    const sosState = {
-      active: true,
-      victimId: victimId.substring(0, 8) + "***",
-      institution,
-      location: { lat, long },
-      timestamp: new Date().toISOString(),
-      mapsLink
-    };
-
-    localStorage.setItem("active_sos", JSON.stringify(sosState));
-    window.dispatchEvent(new Event("storage"));
-
-    // 2️⃣ WhatsApp Alert (All Contacts)
-    if (config.whatsappShare && contacts.length > 0) {
-      console.log("📲 Triggering WhatsApp Alerts...");
-      const message = encodeURIComponent(
-        `🚨 EMERGENCY ALERT 🚨\nI am in danger. Please help immediately!\n\n📍 Live Location:\n${mapsLink}\n\nSent via Safety SOS System`
-      );
-
-      contacts.forEach((contact) => {
-        const url = `https://wa.me/${contact.phone}?text=${message}`;
-        const win = window.open(url, "_blank");
-        if (!win) {
-          console.warn("⚠️ WhatsApp popup blocked for contact:", contact.name);
-        }
+    try {
+      // 🟢 START BACKEND SOS SESSION
+      const sosResponse = await api.post('/sos/start', {
+        victimId,
+        institution,
+        location: { lat, lng },
+        mapsLink,
+        contacts // Pass contacts for server-side automation
       });
-    }
 
-    // 3️⃣ Start 30-sec Live Tracking Loop (DASHBOARD ONLY)
-    startLiveTracking(institution, config);
+      const { publicId } = sosResponse.data;
+      currentPublicId = publicId;
 
-    // 4️⃣ SMS Alert (Web-Safe Native Trigger)
-    if (config.smsAlerts && contacts.length > 0) {
-      console.log("📲 Triggering SMS Alerts...");
-      triggerSMS(contacts, mapsLink);
-    }
+      const liveTrackLink = `${window.location.origin}/sos-track/${publicId}`;
 
-    // 5️⃣ Start Audio Recording (if enabled)
-    if (config.autoAudio) {
-      startAudioRecording();
+      const sosState = {
+        active: true,
+        publicId,
+        victimId,
+        institution,
+        location: { lat, lng },
+        timestamp: new Date().toISOString(),
+        mapsLink,
+        liveTrackLink
+      };
+
+      localStorage.setItem("active_sos", JSON.stringify(sosState));
+      window.dispatchEvent(new Event("storage"));
+
+      // 📲 WhatsApp Alert (Handled by Backend Automation)
+      if (config.whatsappShare && contacts.length > 0) {
+        console.log("📲 Backend triggering automated WhatsApp alerts...");
+        // Manual window.open is disabled to ensure a truly 'automatic' (hands-free) experience
+        /*
+        contacts.forEach((contact) => {
+          const url = `https://wa.me/${contact.phone}?text=${message}`;
+          window.open(url, "_blank");
+        });
+        */
+      }
+
+      // 📡 Start High-Frequency Backend Update Loop
+      startLiveTracking(publicId);
+
+      // 🎙️ SMS & Audio
+      if (config.smsAlerts && contacts.length > 0) {
+        triggerSMS(contacts, liveTrackLink);
+      }
+
+      if (config.autoAudio) {
+        startAudioRecording();
+      }
+
+    } catch (error) {
+      console.error("Failed to sync SOS with backend:", error);
+      toast.error("Network Error", { description: "SOS triggered locally, but backend sync failed." });
     }
   });
 };
 
-const triggerSMS = (contacts: EmergencyContact[], mapsLink: string) => {
-  const bodyText = `🚨 EMERGENCY! I am in danger.\nLocation: ${mapsLink}`;
+const triggerSMS = (contacts: EmergencyContact[], liveTrackLink: string) => {
+  const bodyText = `🚨 EMERGENCY! I am in danger. Track me live: ${liveTrackLink}`;
   const body = encodeURIComponent(bodyText);
 
-  // 🖥️ Desktop Simulation (Since browsers can't actually send SMS)
-  console.log("📲 SMS Simulation Triggered for:", contacts.map(c => c.name));
-  toast.info("📲 SMS TRIGGERED (Simulation)", {
-    description: `Distress message sent to ${contacts.length} contacts with coordinates.`,
-    duration: 6000,
-  });
-
-  // 📱 Mobile Native Trigger
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const separator = isIOS ? "," : ";";
   const phones = contacts.map((c) => c.phone).join(separator);
@@ -132,33 +139,38 @@ const triggerSMS = (contacts: EmergencyContact[], mapsLink: string) => {
     ? `sms:${phones}&body=${body}`
     : `sms:${phones}?body=${body}`;
 
-  // This will open the messaging app on mobile, or do nothing/error on most desktops
-  try {
-    window.open(smsUrl, "_blank");
-  } catch (e) {
-    console.warn("Native SMS trigger failed (Common on Desktop)");
-  }
+  window.open(smsUrl, "_blank");
 };
 
-const startLiveTracking = (institution: string, config: SafetyConfig) => {
+const startLiveTracking = (publicId: string) => {
   if (trackingInterval) return;
 
   trackingInterval = setInterval(() => {
-    navigator.geolocation.getCurrentPosition((position) => {
+    navigator.geolocation.getCurrentPosition(async (position) => {
       const lat = position.coords.latitude;
-      const long = position.coords.longitude;
-      const mapsLink = `https://maps.google.com/?q=${lat},${long}`;
+      const lng = position.coords.longitude;
+      const mapsLink = `https://maps.google.com/?q=${lat},${lng}`;
 
-      console.log("📡 Updating Live Location Broadcast...");
-      const sos = JSON.parse(localStorage.getItem("active_sos") || "{}");
-      if (sos.active) {
-        sos.location = { lat, long };
-        sos.mapsLink = mapsLink;
-        localStorage.setItem("active_sos", JSON.stringify(sos));
-        window.dispatchEvent(new Event("storage"));
+      try {
+        await api.post('/sos/update', {
+          publicId,
+          location: { lat, lng },
+          mapsLink
+        });
+
+        // Sync local storage for dashboard
+        const sos = JSON.parse(localStorage.getItem("active_sos") || "{}");
+        if (sos.active) {
+          sos.location = { lat, lng };
+          sos.mapsLink = mapsLink;
+          localStorage.setItem("active_sos", JSON.stringify(sos));
+          window.dispatchEvent(new Event("storage"));
+        }
+      } catch (err) {
+        console.warn("Failed to update live location on backend");
       }
     });
-  }, 30000);
+  }, 10000); // 10s updates for live tracking link
 };
 
 const startAudioRecording = async () => {
@@ -173,7 +185,9 @@ const startAudioRecording = async () => {
 
     mediaRecorder.onstop = async () => {
       const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-      const victimId = localStorage.getItem("user_id") || "VICTIM-UNKNOWN";
+      const rawUser = localStorage.getItem("user");
+      const user = rawUser ? JSON.parse(rawUser) : null;
+      const victimId = user?.victimId || user?.id || "VICTIM-UNKNOWN";
 
       await audioStorage.saveRecording({
         id: `SOS-${Date.now()}`,
@@ -182,21 +196,28 @@ const startAudioRecording = async () => {
         victimId
       });
 
-      console.log("💾 SOS Audio Persistent in IndexedDB");
       toast.success("Evidence Saved", { description: "SOS Audio recording stored securely." });
     };
 
     mediaRecorder.start();
-    console.log("🎙️ Audio recording started (SOS Mode)");
   } catch (error) {
     console.error("Microphone permission denied");
   }
 };
 
-export const stopSOS = () => {
+export const stopSOS = async () => {
   if (trackingInterval) {
     clearInterval(trackingInterval);
     trackingInterval = null;
+  }
+
+  if (currentPublicId) {
+    try {
+      await api.post('/sos/resolve', { publicId: currentPublicId });
+    } catch (err) {
+      console.warn("Failed to resolve SOS session on backend");
+    }
+    currentPublicId = null;
   }
 
   if (mediaRecorder && mediaRecorder.state !== "inactive") {

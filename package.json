@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "server": "npm --prefix backend/api-server start"
+    "server": "npm --prefix backend/api-server run dev"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

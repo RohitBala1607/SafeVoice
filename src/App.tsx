@@ -31,6 +31,7 @@ import InstitutionTraining from "./pages/InstitutionTraining";
 import InstitutionAnalytics from "./pages/InstitutionAnalytics";
 import InstitutionIC from "./pages/InstitutionIC";
 import Modules from "./pages/Modules";
+import SOSTrack from "./pages/SOSTrack";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -63,7 +64,7 @@ const App = () => {
 
     // ⌨️ KEYBOARD GESTURE: Press "S" 3 times quickly
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === "s") {
+      if (event.key && event.key.toLowerCase() === "s") {
         keyPressCount.current += 1;
 
         if (timer.current) clearTimeout(timer.current);
@@ -143,6 +144,7 @@ const App = () => {
                 <Route path="/authority-dashboard" element={<ProtectedRoute allowedRoles={['authority']}><AuthorityDashboard /></ProtectedRoute>} />
 
                 <Route path="/modules" element={<Modules />} />
+                <Route path="/sos-track/:publicId" element={<SOSTrack />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

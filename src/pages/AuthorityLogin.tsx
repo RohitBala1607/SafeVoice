@@ -17,10 +17,12 @@ const AuthorityLogin = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const { authorityLogin } = useAuth();
+
   const handleLogin = async () => {
     setLoading(true);
     try {
-      await login(email, password);
+      await authorityLogin(email, password);
       toast({
         title: "Authority Login Successful",
         description: "Access granted to IC Administration.",
