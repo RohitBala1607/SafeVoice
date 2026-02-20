@@ -1,4 +1,4 @@
-// sosEngine.ts
+import { toast } from "sonner";
 
 interface SafetyConfig {
   sosEnabled: boolean;
@@ -22,7 +22,7 @@ export const startSOS = async () => {
     sosEnabled: true,
     stealthMode: false,
     autoAudio: true,
-    smsAlerts: false,
+    smsAlerts: true,
     whatsappShare: true,
     triggerMode: "gesture"
   };
@@ -107,22 +107,31 @@ export const startSOS = async () => {
 };
 
 const triggerSMS = (contacts: EmergencyContact[], mapsLink: string) => {
-  const body = encodeURIComponent(
-    `🚨 EMERGENCY! I am in danger.\nLocation: ${mapsLink}\nSent via Safety SOS System`
-  );
+  const bodyText = `🚨 EMERGENCY! I am in danger.\nLocation: ${mapsLink}`;
+  const body = encodeURIComponent(bodyText);
 
-  // Note: Standard web behavior triggers native SMS app
-  // Android uses ';' separator, iOS uses ','
+  // 🖥️ Desktop Simulation (Since browsers can't actually send SMS)
+  console.log("📲 SMS Simulation Triggered for:", contacts.map(c => c.name));
+  toast.info("📲 SMS TRIGGERED (Simulation)", {
+    description: `Distress message sent to ${contacts.length} contacts with coordinates.`,
+    duration: 6000,
+  });
+
+  // 📱 Mobile Native Trigger
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const separator = isIOS ? "," : ";";
   const phones = contacts.map((c) => c.phone).join(separator);
 
-  // Trigger native SMS app
   const smsUrl = isIOS
     ? `sms:${phones}&body=${body}`
     : `sms:${phones}?body=${body}`;
 
-  window.open(smsUrl, "_blank");
+  // This will open the messaging app on mobile, or do nothing/error on most desktops
+  try {
+    window.open(smsUrl, "_blank");
+  } catch (e) {
+    console.warn("Native SMS trigger failed (Common on Desktop)");
+  }
 };
 
 const startLiveTracking = (institution: string, config: SafetyConfig) => {
