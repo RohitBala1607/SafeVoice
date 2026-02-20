@@ -41,7 +41,9 @@ export const startSOS = async () => {
   );
 
   if (!config?.sosEnabled) {
-    console.log("SOS Disabled in settings");
+    toast.error("SOS System Disabled", {
+      description: "Please enable the 'Master SOS Trigger' in Safety Settings.",
+    });
     return;
   }
 

@@ -42,7 +42,7 @@ const SafetySettings = () => {
 
   // 🔥 Dynamic Persistent State (Saved in localStorage)
   const [config, setConfig] = useState<SafetyConfig>({
-    sosEnabled: false,
+    sosEnabled: true,
     stealthMode: true,
     autoAudio: true,
     smsAlerts: true,
