@@ -17,8 +17,8 @@ exports.register = async (req, res) => {
         const existing = await User.findOne({ email });
         if (existing) return res.status(400).json({ message: 'User already exists' });
 
-        // 3. Generate 6-digit OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        // 3. Generate static OTP for development/testing
+        const otp = "123456";
 
         // 4. Hash password for pending user
         const hashedPassword = await bcrypt.hash(password, 10);
