@@ -1,21 +1,40 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Shield, KeyRound } from "lucide-react";
+import { Shield, KeyRound, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import AppHeader from "@/components/AppHeader";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const AuthorityLogin = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const { toast } = useToast();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    // In a real app, the institution would be linked to the user's account.
-    // Defaulting to "Delhi University" for this prototype session.
-    localStorage.setItem("authority_institution", "Delhi University");
-    navigate("/authority-dashboard");
+  const handleLogin = async () => {
+    setLoading(true);
+    try {
+      await login(email, password);
+      toast({
+        title: "Authority Login Successful",
+        description: "Access granted to IC Administration.",
+      });
+      navigate("/authority-dashboard");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: error.response?.data?.message || "Invalid authority credentials.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -42,11 +61,11 @@ const AuthorityLogin = () => {
             </div>
             <Button
               onClick={handleLogin}
-              disabled={!email || !password}
+              disabled={!email || !password || loading}
               className="w-full rounded-xl gradient-primary py-5 text-sm font-semibold text-primary-foreground"
             >
-              <KeyRound className="mr-2 h-4 w-4" />
-              Secure Login
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+              {loading ? "Verifying..." : "Secure Login"}
             </Button>
           </div>
         </motion.div>

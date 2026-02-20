@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ComplaintProvider } from "./context/ComplaintContext";
+import { AuthProvider } from "./context/AuthContext";
 
 // 🔴 SOS Engine (must exist)
 import { startSOS } from "@/services/sosEngine";
@@ -100,45 +101,47 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ComplaintProvider>
-        <TooltipProvider>
-          {/* 🔔 Global Notifications */}
-          <Toaster />
-          <Sonner />
+      <AuthProvider>
+        <ComplaintProvider>
+          <TooltipProvider>
+            {/* 🔔 Global Notifications */}
+            <Toaster />
+            <Sonner />
 
-          {/* 🌐 Router */}
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Splash />} />
-              <Route path="/welcome" element={<Welcome />} />
-              <Route path="/permissions" element={<PermissionOnboarding />} />
-              <Route path="/role-selection" element={<RoleSelection />} />
-              <Route path="/register" element={<Registration />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/safety-settings" element={<SafetySettings />} />
-              <Route path="/file-complaint" element={<FileComplaint />} />
-              <Route path="/cases" element={<TrackCases />} />
-              <Route path="/authority-login" element={<AuthorityLogin />} />
-              <Route path="/authority-dashboard" element={<AuthorityDashboard />} />
-              <Route path="/institution-login" element={<InstitutionLogin />} />
-              <Route path="/institution-register" element={<InstitutionRegister />} />
-              <Route path="/institution-dashboard" element={<InstitutionDashboard />} />
-              <Route path="/institution-transparency" element={<InstitutionTransparency />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/modules" element={<Modules />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+            {/* 🌐 Router */}
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Splash />} />
+                <Route path="/welcome" element={<Welcome />} />
+                <Route path="/permissions" element={<PermissionOnboarding />} />
+                <Route path="/role-selection" element={<RoleSelection />} />
+                <Route path="/register" element={<Registration />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/safety-settings" element={<SafetySettings />} />
+                <Route path="/file-complaint" element={<FileComplaint />} />
+                <Route path="/cases" element={<TrackCases />} />
+                <Route path="/authority-login" element={<AuthorityLogin />} />
+                <Route path="/authority-dashboard" element={<AuthorityDashboard />} />
+                <Route path="/institution-login" element={<InstitutionLogin />} />
+                <Route path="/institution-register" element={<InstitutionRegister />} />
+                <Route path="/institution-dashboard" element={<InstitutionDashboard />} />
+                <Route path="/institution-transparency" element={<InstitutionTransparency />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/modules" element={<Modules />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
 
-          {/* 🧪 Hidden Dev Hint */}
-          <div style={{ display: "none" }}>
-            Gesture Testing:
-            - Press "S" key 3 times OR
-            - Triple Click Mouse
-            to trigger Panic SOS
-          </div>
-        </TooltipProvider>
-      </ComplaintProvider>
+            {/* 🧪 Hidden Dev Hint */}
+            <div style={{ display: "none" }}>
+              Gesture Testing:
+              - Press "S" key 3 times OR
+              - Triple Click Mouse
+              to trigger Panic SOS
+            </div>
+          </TooltipProvider>
+        </ComplaintProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

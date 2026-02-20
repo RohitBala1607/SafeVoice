@@ -1,33 +1,76 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Building2, Mail, KeyRound, CheckCircle2 } from "lucide-react";
+import { Building2, Mail, KeyRound, CheckCircle2, User, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import AppHeader from "@/components/AppHeader";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const institutions = [
-  "Delhi University",
-  "IIT Bombay",
-  "Tata Consultancy Services",
-  "Infosys Limited",
-  "AIIMS Delhi",
-  "National Law School, Bangalore",
-  "Wipro Technologies",
-  "Indian Statistical Institute",
-  "Jawaharlal Nehru University",
-  "Reliance Industries",
+  "SRM University",
+  "VIT University",
+  "IIT Madras",
+  "Anna University",
+  "SafeVoice Org"
 ];
 
 const Registration = () => {
   const navigate = useNavigate();
+  const { register, verifyOtp } = useAuth();
+  const { toast } = useToast();
+
   const [step, setStep] = useState(1);
   const [search, setSearch] = useState("");
   const [selectedInstitution, setSelectedInstitution] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const filtered = institutions.filter((i) => i.toLowerCase().includes(search.toLowerCase()));
+
+  const handleSendOtp = async () => {
+    setLoading(true);
+    try {
+      await register(name, email, password, selectedInstitution);
+      toast({
+        title: "OTP Sent",
+        description: "Please check your email for the verification code.",
+      });
+      setStep(3);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: error.response?.data?.message || "Something went wrong. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setLoading(true);
+    try {
+      await verifyOtp(name, email, password, selectedInstitution, otp);
+      toast({
+        title: "Registration Successful",
+        description: "Your safe identity has been created.",
+      });
+      setStep(4);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Verification Failed",
+        description: error.response?.data?.message || "Invalid or expired OTP.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (step === 4) {
     // Save institution for the dashboard
@@ -110,19 +153,49 @@ const Registration = () => {
         {step === 2 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
             <div className="mb-4 inline-flex rounded-lg bg-primary/10 p-2">
-              <Mail className="h-5 w-5 text-primary" />
+              <User className="h-5 w-5 text-primary" />
             </div>
-            <h2 className="font-display text-lg font-semibold text-foreground">Verify Your Email</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Use your official {selectedInstitution} email</p>
-            <Input
-              className="mt-4"
-              type="email"
-              placeholder="yourname@institution.edu"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <Button onClick={() => setStep(3)} disabled={!email.includes("@")} className="mt-4 w-full rounded-xl gradient-primary py-5 text-sm font-semibold text-primary-foreground">
-              Send OTP
+            <h2 className="font-display text-lg font-semibold text-foreground">Personal Details</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Enter your name and official {selectedInstitution} email</p>
+
+            <div className="mt-6 space-y-4">
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-10"
+                  placeholder="Full Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-10"
+                  type="email"
+                  placeholder="yourname@institution.edu"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-10"
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <Button
+              onClick={handleSendOtp}
+              disabled={!email.includes("@") || !name || password.length < 6 || loading}
+              className="mt-6 w-full rounded-xl gradient-primary py-5 text-sm font-semibold text-primary-foreground"
+            >
+              {loading ? "Sending..." : "Send OTP"}
             </Button>
           </motion.div>
         )}
@@ -141,8 +214,12 @@ const Registration = () => {
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
             />
-            <Button onClick={() => setStep(4)} disabled={otp.length !== 6} className="mt-4 w-full rounded-xl gradient-primary py-5 text-sm font-semibold text-primary-foreground">
-              Verify & Create Identity
+            <Button
+              onClick={handleVerifyOtp}
+              disabled={otp.length !== 6 || loading}
+              className="mt-4 w-full rounded-xl gradient-primary py-5 text-sm font-semibold text-primary-foreground"
+            >
+              {loading ? "Verifying..." : "Verify & Create Identity"}
             </Button>
             <p className="mt-3 text-center text-xs text-muted-foreground">
               Your identity will be encrypted per POSH Act Section 16

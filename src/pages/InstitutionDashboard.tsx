@@ -8,15 +8,24 @@ import AppHeader from "@/components/AppHeader";
 import DashboardCard from "@/components/DashboardCard";
 import BottomNav from "@/components/BottomNav";
 import SOSAlert from "@/components/SOSAlert";
+import { useAuth } from "@/context/AuthContext";
+import { useComplaints } from "@/context/ComplaintContext";
 
 const InstitutionDashboard = () => {
     const navigate = useNavigate();
-    // We can default to a generic name if not found
-    const institution = localStorage.getItem("user_institution") || "Delhi University";
+    const { user, logout } = useAuth();
+    const { complaints } = useComplaints();
+    const institution = user?.institution || localStorage.getItem("user_institution") || "Delhi University";
 
     const handleLogout = () => {
-        localStorage.removeItem("user_institution");
+        logout();
         navigate("/role-selection");
+    };
+
+    const stats = {
+        resolved: complaints.filter(c => c.status === "closed").length,
+        review: complaints.filter(c => c.status === "under_review" || c.status === "verified").length,
+        escalated: complaints.filter(c => c.priority === "emergency" && c.status !== "closed").length,
     };
 
     return (
@@ -121,21 +130,21 @@ const InstitutionDashboard = () => {
                                 <div className="h-2 w-2 rounded-full bg-safety" />
                                 <span className="text-xs font-medium text-foreground">Resolved Successfully</span>
                             </div>
-                            <span className="text-xs font-bold text-foreground">24</span>
+                            <span className="text-xs font-bold text-foreground">{stats.resolved}</span>
                         </div>
                         <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
                             <div className="flex items-center gap-2">
                                 <div className="h-2 w-2 rounded-full bg-warning" />
                                 <span className="text-xs font-medium text-foreground">Under IC Review</span>
                             </div>
-                            <span className="text-xs font-bold text-foreground">8</span>
+                            <span className="text-xs font-bold text-foreground">{stats.review}</span>
                         </div>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <div className="h-2 w-2 rounded-full bg-emergency" />
-                                <span className="text-xs font-medium text-foreground">Escalated / External</span>
+                                <span className="text-xs font-medium text-foreground">Escalated / Emergency</span>
                             </div>
-                            <span className="text-xs font-bold text-foreground">2</span>
+                            <span className="text-xs font-bold text-foreground">{stats.escalated}</span>
                         </div>
                     </div>
 

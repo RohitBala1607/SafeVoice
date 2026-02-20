@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileText, Calendar, MapPin, Upload, Shield, ChevronDown } from "lucide-react";
+import { FileText, Calendar, MapPin, Upload, Shield, ChevronDown, Loader2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import AppHeader from "@/components/AppHeader";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { useComplaints } from "@/context/ComplaintContext";
+import { useAuth } from "@/context/AuthContext";
 
 import { getHarassmentTypeNames } from "@/data/harassment-modules";
 
@@ -17,6 +18,9 @@ const FileComplaint = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { addComplaint } = useComplaints();
+  const { user } = useAuth();
+  const { toast } = useToast();
+
   const preSelectedType = (location.state as any)?.selectedType || "";
 
   const [anonymous, setAnonymous] = useState(true);
@@ -25,19 +29,33 @@ const FileComplaint = () => {
   const [locationStr, setLocationStr] = useState("");
   const [type, setType] = useState(preSelectedType);
   const [showTypes, setShowTypes] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
-    const newCase = addComplaint({
-      type: type as any,
-      description,
-      location: locationStr,
-      date: date || new Date().toISOString(),
-    });
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      const result = await addComplaint({
+        type: type as any,
+        description,
+        location: locationStr,
+        date: date || new Date().toISOString(),
+        complaintId: `POSH-${Date.now()}` // Generating a temporary ID if not handled by backend
+      });
 
-    toast.success(`Case ${newCase.id} Filed Successfully`, {
-      description: "Your complaint is encrypted and submitted securely.",
-    });
-    navigate("/cases");
+      toast({
+        title: "Complaint Filed Successfully",
+        description: `Your case reference is ${result.id || 'noted'}. It is encrypted and secured.`,
+      });
+      navigate("/cases");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Submission Failed",
+        description: error.response?.data?.message || "Failed to submit your complaint. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -64,7 +82,7 @@ const FileComplaint = () => {
           {/* Institution */}
           <div className="rounded-lg border border-border bg-card px-4 py-3">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Institution</p>
-            <p className="mt-1 text-sm font-medium text-foreground">Delhi University</p>
+            <p className="mt-1 text-sm font-medium text-foreground">{user?.institution || "Loading..."}</p>
           </div>
 
           {/* Harassment Type */}
@@ -141,10 +159,11 @@ const FileComplaint = () => {
       <div className="sticky bottom-0 border-t border-border bg-card/95 px-4 py-4 backdrop-blur-lg">
         <Button
           onClick={handleSubmit}
-          disabled={!description || !type}
+          disabled={!description || !type || loading}
           className="w-full rounded-xl gradient-primary py-6 text-sm font-semibold text-primary-foreground"
         >
-          Submit Complaint Securely
+          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {loading ? "Submitting Securely..." : "Submit Complaint Securely"}
         </Button>
       </div>
     </div>

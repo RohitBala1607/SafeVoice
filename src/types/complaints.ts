@@ -12,7 +12,8 @@ export type CaseStatus = "submitted" | "under_review" | "verified" | "closed";
 export type Priority = "low" | "medium" | "high" | "emergency";
 
 export interface Complaint {
-    id: string;
+    id: string; // Internal/Local ID
+    complaintId: string; // Human-readable ID from backend
     institution: string;
     priority: Priority;
     status: CaseStatus;

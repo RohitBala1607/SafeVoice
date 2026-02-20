@@ -8,11 +8,13 @@ import AppHeader from "@/components/AppHeader";
 import DashboardCard from "@/components/DashboardCard";
 import BottomNav from "@/components/BottomNav";
 import { useComplaints } from "@/context/ComplaintContext";
+import { useAuth } from "@/context/AuthContext";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { complaints } = useComplaints();
-  const institution = localStorage.getItem("user_institution") || "Your Institution";
+  const { user } = useAuth();
+  const institution = user?.institution || localStorage.getItem("user_institution") || "Your Institution";
 
   const caseCount = complaints.filter(c => c.institution === institution).length;
 

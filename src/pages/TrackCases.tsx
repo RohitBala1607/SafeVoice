@@ -5,13 +5,15 @@ import CaseCard from "@/components/CaseCard";
 import BottomNav from "@/components/BottomNav";
 
 import { useComplaints } from "@/context/ComplaintContext";
+import { useAuth } from "@/context/AuthContext";
 
 const TrackCases = () => {
   const navigate = useNavigate();
   const { complaints } = useComplaints();
+  const { user } = useAuth();
 
-  // Filter for the current institution (simulating user session)
-  const institution = localStorage.getItem("user_institution") || "Delhi University";
+  // Filter for the current institution
+  const institution = user?.institution || localStorage.getItem("user_institution") || "Delhi University";
   const userCases = complaints.filter(c => c.institution === institution);
 
   return (

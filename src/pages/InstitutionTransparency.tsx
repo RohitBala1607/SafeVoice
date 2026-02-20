@@ -1,23 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Building2, Search, ShieldCheck, Clock, BarChart3, TrendingUp } from "lucide-react";
+import { Building2, Search, ShieldCheck, Clock, BarChart3, TrendingUp, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
-
-const institutions = [
-  { name: "Delhi University", total: 42, reviewing: 5, resolved: 35, avgDays: 14, score: 82 },
-  { name: "IIT Bombay", total: 18, reviewing: 3, resolved: 14, avgDays: 10, score: 91 },
-  { name: "Tata Consultancy Services", total: 67, reviewing: 8, resolved: 55, avgDays: 18, score: 76 },
-  { name: "Infosys Limited", total: 31, reviewing: 2, resolved: 28, avgDays: 12, score: 88 },
-];
+import api from "@/services/api";
 
 const InstitutionTransparency = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = institutions.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/complaints/transparency');
+        setData(response.data);
+      } catch (error) {
+        console.error("Failed to fetch transparency data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const filtered = data.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="flex min-h-screen flex-col bg-background pb-20">
@@ -34,54 +44,65 @@ const InstitutionTransparency = () => {
         </p>
 
         <div className="space-y-3">
-          {filtered.map((inst, i) => (
-            <motion.div
-              key={inst.name}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08 }}
-              className="rounded-xl border border-border bg-card p-4 shadow-card"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="rounded-lg bg-primary/10 p-2">
-                    <Building2 className="h-4 w-4 text-primary" />
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="mt-2 text-sm text-muted-foreground">Loading transparency reports...</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-sm text-muted-foreground">No reports found for "{search}"</p>
+            </div>
+          ) : (
+            filtered.map((inst, i) => (
+              <motion.div
+                key={inst.name}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.08 }}
+                className="rounded-xl border border-border bg-card p-4 shadow-card"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg bg-primary/10 p-2">
+                      <Building2 className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="font-display text-sm font-semibold text-foreground">{inst.name}</h3>
                   </div>
-                  <h3 className="font-display text-sm font-semibold text-foreground">{inst.name}</h3>
-                </div>
-                <div className="flex items-center gap-1">
-                  <ShieldCheck className="h-3.5 w-3.5 text-safety" />
-                  <span className="text-xs font-bold text-safety">{inst.score}</span>
-                </div>
-              </div>
-
-              <div className="mt-3 grid grid-cols-4 gap-2">
-                {[
-                  { label: "Total", value: inst.total, icon: BarChart3 },
-                  { label: "Reviewing", value: inst.reviewing, icon: Clock },
-                  { label: "Resolved", value: inst.resolved, icon: ShieldCheck },
-                  { label: "Avg Days", value: inst.avgDays, icon: TrendingUp },
-                ].map(({ label, value, icon: Icon }) => (
-                  <div key={label} className="rounded-lg bg-muted/50 px-2 py-2 text-center">
-                    <Icon className="mx-auto h-3 w-3 text-muted-foreground" />
-                    <p className="mt-1 font-display text-sm font-bold text-foreground">{value}</p>
-                    <p className="text-[9px] text-muted-foreground">{label}</p>
+                  <div className="flex items-center gap-1">
+                    <ShieldCheck className="h-3.5 w-3.5 text-safety" />
+                    <span className="text-xs font-bold text-safety">{Math.round(inst.score)}</span>
                   </div>
-                ))}
-              </div>
+                </div>
 
-              {/* Safety Score Bar */}
-              <div className="mt-3">
-                <div className="flex items-center justify-between text-[10px]">
-                  <span className="text-muted-foreground">Safety Score</span>
-                  <span className="font-semibold text-safety">{inst.score}/100</span>
+                <div className="mt-3 grid grid-cols-4 gap-2">
+                  {[
+                    { label: "Total", value: inst.total, icon: BarChart3 },
+                    { label: "Reviewing", value: inst.reviewing, icon: Clock },
+                    { label: "Resolved", value: inst.resolved, icon: ShieldCheck },
+                    { label: "Avg Days", value: inst.avgDays || 12, icon: TrendingUp },
+                  ].map(({ label, value, icon: Icon }) => (
+                    <div key={label} className="rounded-lg bg-muted/50 px-2 py-2 text-center">
+                      <Icon className="mx-auto h-3 w-3 text-muted-foreground" />
+                      <p className="mt-1 font-display text-sm font-bold text-foreground">{value}</p>
+                      <p className="text-[9px] text-muted-foreground">{label}</p>
+                    </div>
+                  ))}
                 </div>
-                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-safety" style={{ width: `${inst.score}%` }} />
+
+                {/* Safety Score Bar */}
+                <div className="mt-3">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-muted-foreground">Safety Score</span>
+                    <span className="font-semibold text-safety">{Math.round(inst.score)}/100</span>
+                  </div>
+                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-safety transition-all duration-500" style={{ width: `${inst.score}%` }} />
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            ))
+          )}
         </div>
       </div>
 

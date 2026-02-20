@@ -1,21 +1,41 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Building2, KeyRound, ArrowRight } from "lucide-react";
+import { Building2, KeyRound, ArrowRight, Loader2 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import AppHeader from "@/components/AppHeader";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const InstitutionLogin = () => {
     const navigate = useNavigate();
+    const { login } = useAuth();
+    const { toast } = useToast();
+
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Mock authentication
-        localStorage.setItem("user_institution", "Delhi University");
-        navigate("/institution-dashboard");
+        setLoading(true);
+        try {
+            await login(email, password);
+            toast({
+                title: "Login Successful",
+                description: "Welcome to your administration dashboard.",
+            });
+            navigate("/institution-dashboard");
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Login Failed",
+                description: error.response?.data?.message || "Invalid credentials.",
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -67,11 +87,11 @@ const InstitutionLogin = () => {
                         </div>
                         <Button
                             type="submit"
-                            disabled={!email || !password}
+                            disabled={!email || !password || loading}
                             className="w-full rounded-xl gradient-primary py-5 text-sm font-semibold text-primary-foreground"
                         >
-                            <KeyRound className="mr-2 h-4 w-4" />
-                            Secure Access
+                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                            {loading ? "Authenticating..." : "Secure Access"}
                         </Button>
                     </form>
 
