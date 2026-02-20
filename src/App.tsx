@@ -33,12 +33,11 @@ const queryClient = new QueryClient();
 const App = () => {
   // 🧠 Gesture Control States
   const keyPressCount = useRef(0);
-  const clickCount = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSOSRunning = useRef(false);
 
   useEffect(() => {
-    console.log("🚨 Multi-Gesture SOS System Active (Keyboard + Mouse + Mobile)");
+    console.log("🚨 Multi-Gesture SOS System Active (Keyboard + Mobile)");
 
     // 🔴 COMMON SOS TRIGGER FUNCTION (prevents duplicate triggers)
     const triggerSOS = (source: string) => {
@@ -73,21 +72,6 @@ const App = () => {
       }
     };
 
-    // 🖱️ MOUSE GESTURE: Triple Click Anywhere
-    const handleMouseClick = () => {
-      clickCount.current += 1;
-
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => {
-        clickCount.current = 0;
-      }, 1500);
-
-      if (clickCount.current >= 3) {
-        triggerSOS("Mouse (Triple Click)");
-        clickCount.current = 0;
-      }
-    };
-
     // 📳 MOBILE GESTURE: Shake Detection (Future Mobile Support)
     const handleMotion = (event: DeviceMotionEvent) => {
       const acc = event.accelerationIncludingGravity;
@@ -106,12 +90,10 @@ const App = () => {
 
     // 🔗 Attach Global Listeners (Works Across All Pages)
     window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("click", handleMouseClick);
     window.addEventListener("devicemotion", handleMotion);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("click", handleMouseClick);
       window.removeEventListener("devicemotion", handleMotion);
     };
   }, []);

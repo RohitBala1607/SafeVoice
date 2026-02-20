@@ -40,7 +40,7 @@ interface EmergencyContact {
 const SafetySettings = () => {
   const navigate = useNavigate();
 
-  // 🔥 Dynamic Persistent State (Saved in localStorage)
+  //  Dynamic Persistent State (Saved in localStorage)
   const [config, setConfig] = useState<SafetyConfig>({
     sosEnabled: true,
     stealthMode: true,
@@ -50,22 +50,22 @@ const SafetySettings = () => {
     triggerMode: "gesture",
   });
 
-  // 📞 Emergency Contacts State
+  //  Emergency Contacts State
   const [contacts, setContacts] = useState<EmergencyContact[]>([]);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
 
-  // 🔐 Real-time permission status
+  // Real-time permission status
   const [permissions, setPermissions] = useState({
     location: false,
     microphone: false,
     notifications: false,
   });
 
-  // 🗄️ Audio Evidence State
+  //  Audio Evidence State
   const [recordings, setRecordings] = useState<SOSRecording[]>([]);
 
-  // 📦 Load saved config + contacts on startup
+  //  Load saved config + contacts on startup
   useEffect(() => {
     const savedConfig = localStorage.getItem("safety_config");
     const savedContacts = localStorage.getItem("emergency_contacts");
@@ -88,12 +88,12 @@ const SafetySettings = () => {
     loadRecordings();
   };
 
-  // 💾 Persist settings dynamically
+  //  Persist settings dynamically
   useEffect(() => {
     localStorage.setItem("safety_config", JSON.stringify(config));
   }, [config]);
 
-  // 💾 Persist contacts
+  //  Persist contacts
   useEffect(() => {
     localStorage.setItem("emergency_contacts", JSON.stringify(contacts));
   }, [contacts]);
