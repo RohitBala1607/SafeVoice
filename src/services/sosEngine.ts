@@ -93,11 +93,36 @@ export const startSOS = async () => {
     // 3️⃣ Start 30-sec Live Tracking Loop (DASHBOARD ONLY)
     startLiveTracking(institution, config);
 
-    // 4️⃣ Start Audio Recording (if enabled)
+    // 4️⃣ SMS Alert (Web-Safe Native Trigger)
+    if (config.smsAlerts && contacts.length > 0) {
+      console.log("📲 Triggering SMS Alerts...");
+      triggerSMS(contacts, mapsLink);
+    }
+
+    // 5️⃣ Start Audio Recording (if enabled)
     if (config.autoAudio) {
       startAudioRecording();
     }
   });
+};
+
+const triggerSMS = (contacts: EmergencyContact[], mapsLink: string) => {
+  const body = encodeURIComponent(
+    `🚨 EMERGENCY! I am in danger.\nLocation: ${mapsLink}\nSent via Safety SOS System`
+  );
+
+  // Note: Standard web behavior triggers native SMS app
+  // Android uses ';' separator, iOS uses ','
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const separator = isIOS ? "," : ";";
+  const phones = contacts.map((c) => c.phone).join(separator);
+
+  // Trigger native SMS app
+  const smsUrl = isIOS
+    ? `sms:${phones}&body=${body}`
+    : `sms:${phones}?body=${body}`;
+
+  window.open(smsUrl, "_blank");
 };
 
 const startLiveTracking = (institution: string, config: SafetyConfig) => {
