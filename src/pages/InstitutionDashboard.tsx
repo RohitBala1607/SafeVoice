@@ -95,19 +95,19 @@ const InstitutionDashboard = () => {
                         title="Training Portal"
                         description="Manage mandatory staff POSH sessions"
                         variant="shield"
-                        onClick={() => { }}
+                        onClick={() => navigate("/institution-training")}
                     />
                     <DashboardCard
                         icon={BarChart3}
                         title="Analytics"
                         description="Institutional sentiment & trends"
-                        onClick={() => { }}
+                        onClick={() => navigate("/institution-analytics")}
                     />
                     <DashboardCard
                         icon={FileCheck}
                         title="IC Committee"
                         description="Manage Internal Committee members"
-                        onClick={() => { }}
+                        onClick={() => navigate("/institution-ic")}
                     />
                     <DashboardCard
                         icon={TrendingUp}

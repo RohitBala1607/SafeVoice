@@ -1,17 +1,28 @@
 import { Home, FileText, BarChart3, Settings, User } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-const navItems = [
-  { icon: Home, label: "Home", path: "/dashboard" },
-  { icon: FileText, label: "Cases", path: "/cases" },
-  { icon: BarChart3, label: "Reports", path: "/institution-transparency" },
-  { icon: Settings, label: "Safety", path: "/safety-settings" },
-  { icon: User, label: "Profile", path: "/profile" },
-];
+
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+
+  const isInstitution = user?.role === "institution";
+
+  const navItems = isInstitution
+    ? [
+      { icon: Home, label: "Home", path: "/institution-dashboard" },
+      { icon: BarChart3, label: "Reports", path: "/institution-transparency" },
+      { icon: User, label: "Profile", path: "/institution-profile" },
+    ]
+    : [
+      { icon: Home, label: "Home", path: "/dashboard" },
+      { icon: FileText, label: "Cases", path: "/cases" },
+      { icon: Settings, label: "Safety", path: "/safety-settings" },
+      { icon: User, label: "Profile", path: "/profile" },
+    ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 pb-safe-bottom backdrop-blur-lg">
@@ -22,9 +33,8 @@ const BottomNav = () => {
             <button
               key={path}
               onClick={() => navigate(path)}
-              className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 transition-colors ${
-                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               <Icon className="h-5 w-5" />
               <span className="text-[10px] font-medium">{label}</span>

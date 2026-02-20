@@ -26,7 +26,12 @@ import InstitutionTransparency from "./pages/InstitutionTransparency";
 import InstitutionLogin from "./pages/InstitutionLogin";
 import InstitutionRegister from "./pages/InstitutionRegister";
 import Profile from "./pages/Profile";
+import InstitutionProfile from "./pages/InstitutionProfile";
+import InstitutionTraining from "./pages/InstitutionTraining";
+import InstitutionAnalytics from "./pages/InstitutionAnalytics";
+import InstitutionIC from "./pages/InstitutionIC";
 import Modules from "./pages/Modules";
+import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -116,17 +121,27 @@ const App = () => {
                 <Route path="/permissions" element={<PermissionOnboarding />} />
                 <Route path="/role-selection" element={<RoleSelection />} />
                 <Route path="/register" element={<Registration />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/safety-settings" element={<SafetySettings />} />
-                <Route path="/file-complaint" element={<FileComplaint />} />
-                <Route path="/cases" element={<TrackCases />} />
-                <Route path="/authority-login" element={<AuthorityLogin />} />
-                <Route path="/authority-dashboard" element={<AuthorityDashboard />} />
+                {/* Student/Victim Routes */}
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/safety-settings" element={<ProtectedRoute><SafetySettings /></ProtectedRoute>} />
+                <Route path="/file-complaint" element={<ProtectedRoute><FileComplaint /></ProtectedRoute>} />
+                <Route path="/cases" element={<ProtectedRoute><TrackCases /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+
+                {/* Institution Routes */}
                 <Route path="/institution-login" element={<InstitutionLogin />} />
                 <Route path="/institution-register" element={<InstitutionRegister />} />
-                <Route path="/institution-dashboard" element={<InstitutionDashboard />} />
-                <Route path="/institution-transparency" element={<InstitutionTransparency />} />
-                <Route path="/profile" element={<Profile />} />
+                <Route path="/institution-dashboard" element={<ProtectedRoute allowedRoles={['institution']}><InstitutionDashboard /></ProtectedRoute>} />
+                <Route path="/institution-profile" element={<ProtectedRoute allowedRoles={['institution']}><InstitutionProfile /></ProtectedRoute>} />
+                <Route path="/institution-transparency" element={<ProtectedRoute allowedRoles={['institution']}><InstitutionTransparency /></ProtectedRoute>} />
+                <Route path="/institution-training" element={<ProtectedRoute allowedRoles={['institution']}><InstitutionTraining /></ProtectedRoute>} />
+                <Route path="/institution-analytics" element={<ProtectedRoute allowedRoles={['institution']}><InstitutionAnalytics /></ProtectedRoute>} />
+                <Route path="/institution-ic" element={<ProtectedRoute allowedRoles={['institution']}><InstitutionIC /></ProtectedRoute>} />
+
+                {/* Authority Routes */}
+                <Route path="/authority-login" element={<AuthorityLogin />} />
+                <Route path="/authority-dashboard" element={<ProtectedRoute allowedRoles={['authority']}><AuthorityDashboard /></ProtectedRoute>} />
+
                 <Route path="/modules" element={<Modules />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

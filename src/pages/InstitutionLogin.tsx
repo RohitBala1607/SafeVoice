@@ -5,13 +5,14 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import AppHeader from "@/components/AppHeader";
-import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+
+import { useAuth } from "@/context/AuthContext";
 
 const InstitutionLogin = () => {
     const navigate = useNavigate();
-    const { login } = useAuth();
     const { toast } = useToast();
+    const { institutionLogin } = useAuth();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -19,19 +20,24 @@ const InstitutionLogin = () => {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!email || !password) return;
         setLoading(true);
+
         try {
-            await login(email, password);
+            await institutionLogin(email, password);
+
             toast({
                 title: "Login Successful",
                 description: "Welcome to your administration dashboard.",
             });
+
             navigate("/institution-dashboard");
         } catch (error: any) {
+            console.error("Institution Login Error:", error);
             toast({
                 variant: "destructive",
                 title: "Login Failed",
-                description: error.response?.data?.message || "Invalid credentials.",
+                description: error.response?.data?.message || error.message || "Invalid credentials.",
             });
         } finally {
             setLoading(false);
@@ -61,12 +67,18 @@ const InstitutionLogin = () => {
                     transition={{ delay: 0.2 }}
                     className="mt-6 w-full max-w-sm"
                 >
-                    <h2 className="text-center font-display text-xl font-bold text-foreground">Institution Login</h2>
-                    <p className="mt-1 text-center text-sm text-muted-foreground">Access your organization's POSH compliance dashboard</p>
+                    <h2 className="text-center font-display text-xl font-bold text-foreground">
+                        Institution Login
+                    </h2>
+                    <p className="mt-1 text-center text-sm text-muted-foreground">
+                        Access your organization's POSH compliance dashboard
+                    </p>
 
                     <form onSubmit={handleLogin} className="mt-8 space-y-4">
                         <div>
-                            <label className="mb-1.5 block text-xs font-medium text-foreground">Official Email</label>
+                            <label className="mb-1.5 block text-xs font-medium text-foreground">
+                                Official Email
+                            </label>
                             <Input
                                 type="email"
                                 placeholder="admin@institution.edu"
@@ -75,8 +87,11 @@ const InstitutionLogin = () => {
                                 required
                             />
                         </div>
+
                         <div>
-                            <label className="mb-1.5 block text-xs font-medium text-foreground">Password</label>
+                            <label className="mb-1.5 block text-xs font-medium text-foreground">
+                                Password
+                            </label>
                             <Input
                                 type="password"
                                 placeholder="••••••••"
@@ -85,12 +100,17 @@ const InstitutionLogin = () => {
                                 required
                             />
                         </div>
+
                         <Button
                             type="submit"
                             disabled={!email || !password || loading}
                             className="w-full rounded-xl gradient-primary py-5 text-sm font-semibold text-primary-foreground"
                         >
-                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                            {loading ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <KeyRound className="mr-2 h-4 w-4" />
+                            )}
                             {loading ? "Authenticating..." : "Secure Access"}
                         </Button>
                     </form>

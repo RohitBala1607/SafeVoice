@@ -14,6 +14,7 @@ interface AuthContextType {
     token: string | null;
     isAuthenticated: boolean;
     login: (email: string, password: string) => Promise<void>;
+    institutionLogin: (email: string, password: string) => Promise<void>;
     register: (name: string, email: string, password: string, institution: string) => Promise<void>;
     verifyOtp: (name: string, email: string, password: string, institution: string, otp: string) => Promise<void>;
     logout: () => void;
@@ -44,6 +45,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user', JSON.stringify(user));
     };
 
+    const institutionLogin = async (email: string, password: string) => {
+        // We use adminEmail to match what the backend/registration expects
+        const response = await api.post('/institutions/login', { adminEmail: email, password });
+        const { institution, token: loginToken } = response.data;
+
+        // Ensure role is set for RBAC
+        const userData = { ...institution, role: 'institution' };
+
+        setToken(loginToken);
+        setUser(userData);
+        localStorage.setItem('token', loginToken);
+        localStorage.setItem('user', JSON.stringify(userData));
+
+        // Also keep the user's preferred keys for compatibility if they use them elsewhere
+        localStorage.setItem('institution_token', loginToken);
+        localStorage.setItem('institution_data', JSON.stringify(userData));
+    };
+
     const register = async (name: string, email: string, password: string, institution: string) => {
         await api.post('/auth/register', { name, email, password, institution });
     };
@@ -65,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, isAuthenticated: !!token, login, register, verifyOtp, logout, loading }}>
+        <AuthContext.Provider value={{ user, token, isAuthenticated: !!token, login, institutionLogin, register, verifyOtp, logout, loading }}>
             {children}
         </AuthContext.Provider>
     );
