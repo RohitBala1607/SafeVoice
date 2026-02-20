@@ -1,6 +1,18 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Shield, Eye, EyeOff, Hand, Mic, Phone, MessageSquare, AlertTriangle, Play, MapPin, Settings } from "lucide-react";
+import {
+  Shield,
+  EyeOff,
+  Mic,
+  Phone,
+  MessageSquare,
+  AlertTriangle,
+  Play,
+  MapPin,
+  Settings,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import AppHeader from "@/components/AppHeader";
@@ -18,6 +30,12 @@ interface SafetyConfig {
   triggerMode: TriggerMode;
 }
 
+interface EmergencyContact {
+  id: string;
+  name: string;
+  phone: string; // with country code (91xxxxxxxxxx)
+}
+
 const SafetySettings = () => {
   const navigate = useNavigate();
 
@@ -31,6 +49,11 @@ const SafetySettings = () => {
     triggerMode: "gesture",
   });
 
+  // 📞 Emergency Contacts State
+  const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+
   // 🔐 Real-time permission status
   const [permissions, setPermissions] = useState({
     location: false,
@@ -38,12 +61,14 @@ const SafetySettings = () => {
     notifications: false,
   });
 
-  // 📦 Load saved config on startup
+  // 📦 Load saved config + contacts on startup
   useEffect(() => {
-    const saved = localStorage.getItem("safety_config");
-    if (saved) {
-      setConfig(JSON.parse(saved));
-    }
+    const savedConfig = localStorage.getItem("safety_config");
+    const savedContacts = localStorage.getItem("emergency_contacts");
+
+    if (savedConfig) setConfig((prev) => ({ ...prev, ...JSON.parse(savedConfig) }));
+    if (savedContacts) setContacts(JSON.parse(savedContacts));
+
     checkPermissions();
   }, []);
 
@@ -52,10 +77,14 @@ const SafetySettings = () => {
     localStorage.setItem("safety_config", JSON.stringify(config));
   }, [config]);
 
+  // 💾 Persist contacts
+  useEffect(() => {
+    localStorage.setItem("emergency_contacts", JSON.stringify(contacts));
+  }, [contacts]);
+
   // 🔎 REAL-TIME PERMISSION CHECK
   const checkPermissions = async () => {
     try {
-      // Location
       if ("permissions" in navigator) {
         const loc = await navigator.permissions.query({ name: "geolocation" as PermissionName });
         const mic = await navigator.permissions.query({ name: "microphone" as PermissionName });
@@ -105,21 +134,97 @@ const SafetySettings = () => {
     }
   };
 
-  // ⚙️ Open device/app settings (Mobile WebView / PWA support)
+  // ⚙️ Open device/app settings
   const openSettings = () => {
     toast.warning("Please enable permissions from device settings");
-    window.open("about:preferences", "_blank"); // fallback
+    window.open("about:preferences", "_blank");
   };
 
   const updateConfig = (key: keyof SafetyConfig, value: boolean | TriggerMode) => {
     setConfig((prev) => ({ ...prev, [key]: value }));
   };
 
+  // ➕ Add Emergency Contact
+  const addContact = () => {
+    if (!newName.trim() || !newPhone.trim()) {
+      toast.error("Enter name and phone number");
+      return;
+    }
+
+    const cleanedPhone = newPhone.replace(/\D/g, "");
+    const formattedPhone = cleanedPhone.startsWith("91")
+      ? cleanedPhone
+      : `91${cleanedPhone}`;
+
+    const newContact: EmergencyContact = {
+      id: Date.now().toString(),
+      name: newName,
+      phone: formattedPhone,
+    };
+
+    setContacts((prev) => [...prev, newContact]);
+    setNewName("");
+    setNewPhone("");
+    toast.success("Emergency contact added");
+  };
+
+  // ❌ Remove Contact
+  const removeContact = (id: string) => {
+    setContacts((prev) => prev.filter((c) => c.id !== id));
+    toast.success("Contact removed");
+  };
+
+  // 📍 Send WhatsApp Location Alert to Contacts
+  const sendWhatsAppAlertToContacts = () => {
+    if (contacts.length === 0) {
+      toast.error("No emergency contacts added");
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      toast.error("Location not supported");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const long = position.coords.longitude;
+
+        const mapsLink = `https://maps.google.com/?q=${lat},${long}`;
+
+        const message = encodeURIComponent(
+          `🚨 EMERGENCY ALERT 🚨
+I am in danger. Please help me immediately.
+
+📍 Live Location:
+${mapsLink}
+
+Sent via Safety SOS System`
+        );
+
+        contacts.forEach((contact) => {
+          const whatsappUrl = `https://wa.me/${contact.phone}?text=${message}`;
+          window.open(whatsappUrl, "_blank");
+        });
+
+        toast.success("WhatsApp alert opened for all emergency contacts");
+      },
+      () => {
+        toast.error("Unable to fetch location");
+      }
+    );
+  };
+
   const handleTestSOS = () => {
     toast.info("🔴 Live SOS Simulation Started", {
-      description: "Audio + Location tracking + Alerts simulated in real-time.",
+      description: "Location + WhatsApp alert simulation (no real SMS sent).",
       duration: 4000,
     });
+
+    if (config.whatsappShare) {
+      sendWhatsAppAlertToContacts();
+    }
   };
 
   return (
@@ -151,7 +256,7 @@ const SafetySettings = () => {
           </div>
         </motion.div>
 
-        {/* 🔐 LIVE PERMISSION STATUS CARD */}
+        {/* 🔐 LIVE PERMISSION STATUS */}
         <div className="rounded-xl border bg-card p-4">
           <h4 className="text-xs font-semibold mb-3 uppercase text-muted-foreground">
             Real-Time Permission Status
@@ -170,9 +275,8 @@ const SafetySettings = () => {
 
               <button
                 onClick={() => requestPermission(perm.key as any)}
-                className={`text-xs px-3 py-1 rounded-full ${
-                  perm.granted ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
-                }`}
+                className={`text-xs px-3 py-1 rounded-full ${perm.granted ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                  }`}
               >
                 {perm.granted ? "Granted" : "Enable"}
               </button>
@@ -192,13 +296,13 @@ const SafetySettings = () => {
         {config.sosEnabled && (
           <div className="rounded-xl border bg-card p-4 space-y-4">
             <h4 className="text-xs font-semibold uppercase text-muted-foreground">
-              Dynamic Emergency Features (Real-Time)
+              Emergency Feature Configuration
             </h4>
 
             {[
               { label: "Auto Audio Recording", key: "autoAudio", desc: "Records audio during SOS", icon: Mic },
               { label: "SMS Alerts (Helpline 112)", key: "smsAlerts", desc: "Send distress SMS with live location", icon: MessageSquare },
-              { label: "WhatsApp Live Location", key: "whatsappShare", desc: "Share location every 30 seconds", icon: Phone },
+              { label: "WhatsApp Live Location", key: "whatsappShare", desc: "Share location with trusted contacts", icon: Phone },
               { label: "Stealth Mode", key: "stealthMode", desc: "Hide SOS UI indicators", icon: EyeOff },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between">
@@ -218,6 +322,64 @@ const SafetySettings = () => {
           </div>
         )}
 
+        {/* 📞 EMERGENCY CONTACTS (NEW) */}
+        <div className="rounded-xl border border-border bg-card p-4">
+          <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3">
+            Trusted Emergency Contacts (WhatsApp Alerts)
+          </h4>
+
+          <div className="flex flex-col gap-2 mb-4">
+            <input
+              type="text"
+              placeholder="Contact Name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="rounded-lg border px-3 py-2 text-sm"
+            />
+            <input
+              type="tel"
+              placeholder="Phone Number (9876543210)"
+              value={newPhone}
+              onChange={(e) => setNewPhone(e.target.value)}
+              className="rounded-lg border px-3 py-2 text-sm"
+            />
+            <button
+              onClick={addContact}
+              className="flex items-center justify-center gap-2 rounded-lg bg-primary py-2 text-xs font-semibold text-white"
+            >
+              <Plus className="h-3 w-3" />
+              Add Emergency Contact
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {contacts.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                No contacts added. Add at least one for WhatsApp SOS alerts.
+              </p>
+            )}
+
+            {contacts.map((contact) => (
+              <div key={contact.id} className="flex items-center justify-between rounded-lg bg-muted/30 p-3">
+                <div>
+                  <p className="text-xs font-semibold">{contact.name}</p>
+                  <p className="text-[10px] text-muted-foreground">+{contact.phone}</p>
+                </div>
+                <button onClick={() => removeContact(contact.id)}>
+                  <Trash2 className="h-4 w-4 text-emergency" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={sendWhatsAppAlertToContacts}
+            className="mt-4 w-full rounded-lg bg-green-600 py-2 text-xs font-semibold text-white"
+          >
+            Send Test WhatsApp Location Alert
+          </button>
+        </div>
+
         {/* TEST SOS */}
         <button
           onClick={handleTestSOS}
@@ -230,7 +392,7 @@ const SafetySettings = () => {
         <div className="flex items-start gap-2 rounded-lg bg-warning/5 px-3 py-2">
           <AlertTriangle className="mt-0.5 h-3 w-3 text-warning" />
           <p className="text-[10px] text-muted-foreground">
-            Permissions are checked in real-time. SOS will auto-run without popups once permissions are granted during setup.
+            When SOS is triggered, live location will be sent to all trusted contacts via WhatsApp automatically.
           </p>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import SOSAlert from "@/components/SOSAlert";
 
 import { useComplaints } from "@/context/ComplaintContext";
 
@@ -41,13 +42,14 @@ const AuthorityDashboard = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background pb-20">
+      <SOSAlert institution={institution} />
       <div className="gradient-primary px-4 pb-5 pt-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="h-6 w-6 text-primary-foreground" />
             <div>
-              <h1 className="font-display text-lg font-bold text-primary-foreground">IC / Authority Dashboard</h1>
+              <h1 className="font-display text-lg font-bold text-primary-foreground">IC / Authority Portal</h1>
               <p className="text-xs text-primary-foreground/60">{institution}</p>
             </div>
           </div>
@@ -174,7 +176,7 @@ const AuthorityDashboard = () => {
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

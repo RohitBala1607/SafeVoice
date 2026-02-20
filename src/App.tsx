@@ -1,9 +1,14 @@
+import { useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ComplaintProvider } from "./context/ComplaintContext";
+
+// 🔴 SOS Engine (must exist)
+import { startSOS } from "@/services/sosEngine";
+
 import Splash from "./pages/Splash";
 import Welcome from "./pages/Welcome";
 import PermissionOnboarding from "./pages/PermissionOnboarding";
@@ -25,37 +30,135 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ComplaintProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Splash />} />
-            <Route path="/welcome" element={<Welcome />} />
-            <Route path="/permissions" element={<PermissionOnboarding />} />
-            <Route path="/role-selection" element={<RoleSelection />} />
-            <Route path="/register" element={<Registration />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/safety-settings" element={<SafetySettings />} />
-            <Route path="/file-complaint" element={<FileComplaint />} />
-            <Route path="/cases" element={<TrackCases />} />
-            <Route path="/authority-login" element={<AuthorityLogin />} />
-            <Route path="/authority-dashboard" element={<AuthorityDashboard />} />
-            <Route path="/institution-login" element={<InstitutionLogin />} />
-            <Route path="/institution-register" element={<InstitutionRegister />} />
-            <Route path="/institution-dashboard" element={<InstitutionDashboard />} />
-            <Route path="/institution-transparency" element={<InstitutionTransparency />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/modules" element={<Modules />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ComplaintProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  // 🧠 Gesture Control States
+  const keyPressCount = useRef(0);
+  const clickCount = useRef(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isSOSRunning = useRef(false);
+
+  useEffect(() => {
+    console.log("🚨 Multi-Gesture SOS System Active (Keyboard + Mouse + Mobile)");
+
+    // 🔴 COMMON SOS TRIGGER FUNCTION (prevents duplicate triggers)
+    const triggerSOS = (source: string) => {
+      if (isSOSRunning.current) return;
+
+      console.log(`🚨 PANIC GESTURE DETECTED via ${source}`);
+      isSOSRunning.current = true;
+
+      // Start full emergency system
+      startSOS();
+
+      // Cooldown to prevent spam triggers
+      setTimeout(() => {
+        isSOSRunning.current = false;
+      }, 10000);
+    };
+
+    // ⌨️ KEYBOARD GESTURE: Press "S" 3 times quickly
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === "s") {
+        keyPressCount.current += 1;
+
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = setTimeout(() => {
+          keyPressCount.current = 0;
+        }, 1500);
+
+        if (keyPressCount.current >= 3) {
+          triggerSOS("Keyboard (Triple S Key)");
+          keyPressCount.current = 0;
+        }
+      }
+    };
+
+    // 🖱️ MOUSE GESTURE: Triple Click Anywhere
+    const handleMouseClick = () => {
+      clickCount.current += 1;
+
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => {
+        clickCount.current = 0;
+      }, 1500);
+
+      if (clickCount.current >= 3) {
+        triggerSOS("Mouse (Triple Click)");
+        clickCount.current = 0;
+      }
+    };
+
+    // 📳 MOBILE GESTURE: Shake Detection (Future Mobile Support)
+    const handleMotion = (event: DeviceMotionEvent) => {
+      const acc = event.accelerationIncludingGravity;
+      if (!acc) return;
+
+      const movement =
+        Math.abs(acc.x || 0) +
+        Math.abs(acc.y || 0) +
+        Math.abs(acc.z || 0);
+
+      // Shake threshold (for mobile devices)
+      if (movement > 30) {
+        triggerSOS("Mobile Shake Gesture");
+      }
+    };
+
+    // 🔗 Attach Global Listeners (Works Across All Pages)
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("click", handleMouseClick);
+    window.addEventListener("devicemotion", handleMotion);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("click", handleMouseClick);
+      window.removeEventListener("devicemotion", handleMotion);
+    };
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ComplaintProvider>
+        <TooltipProvider>
+          {/* 🔔 Global Notifications */}
+          <Toaster />
+          <Sonner />
+
+          {/* 🌐 Router */}
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Splash />} />
+              <Route path="/welcome" element={<Welcome />} />
+              <Route path="/permissions" element={<PermissionOnboarding />} />
+              <Route path="/role-selection" element={<RoleSelection />} />
+              <Route path="/register" element={<Registration />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/safety-settings" element={<SafetySettings />} />
+              <Route path="/file-complaint" element={<FileComplaint />} />
+              <Route path="/cases" element={<TrackCases />} />
+              <Route path="/authority-login" element={<AuthorityLogin />} />
+              <Route path="/authority-dashboard" element={<AuthorityDashboard />} />
+              <Route path="/institution-login" element={<InstitutionLogin />} />
+              <Route path="/institution-register" element={<InstitutionRegister />} />
+              <Route path="/institution-dashboard" element={<InstitutionDashboard />} />
+              <Route path="/institution-transparency" element={<InstitutionTransparency />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/modules" element={<Modules />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+
+          {/* 🧪 Hidden Dev Hint */}
+          <div style={{ display: "none" }}>
+            Gesture Testing:
+            - Press "S" key 3 times OR
+            - Triple Click Mouse
+            to trigger Panic SOS
+          </div>
+        </TooltipProvider>
+      </ComplaintProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

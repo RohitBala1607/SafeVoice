@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import AppHeader from "@/components/AppHeader";
 import DashboardCard from "@/components/DashboardCard";
 import BottomNav from "@/components/BottomNav";
+import SOSAlert from "@/components/SOSAlert";
 
 const InstitutionDashboard = () => {
     const navigate = useNavigate();
@@ -20,6 +21,7 @@ const InstitutionDashboard = () => {
 
     return (
         <div className="flex min-h-screen flex-col bg-background pb-20">
+            <SOSAlert institution={institution} />
             <div className="gradient-primary px-4 pb-6 pt-8">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
