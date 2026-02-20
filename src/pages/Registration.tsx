@@ -12,6 +12,7 @@ const institutions = [
   "SRM University",
   "VIT University",
   "IIT Madras",
+  "Agni College Of Technology",
   "Anna University",
   "SafeVoice Org"
 ];
@@ -173,7 +174,7 @@ const Registration = () => {
                 <Input
                   className="pl-10"
                   type="email"
-                  placeholder="yourname@institution.edu"
+                  placeholder="institution domain mail"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
