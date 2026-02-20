@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
+import { audioStorage, SOSRecording } from "@/lib/audio-storage";
 
 type TriggerMode = "hidden" | "floating" | "gesture";
 
@@ -61,6 +62,9 @@ const SafetySettings = () => {
     notifications: false,
   });
 
+  // 🗄️ Audio Evidence State
+  const [recordings, setRecordings] = useState<SOSRecording[]>([]);
+
   // 📦 Load saved config + contacts on startup
   useEffect(() => {
     const savedConfig = localStorage.getItem("safety_config");
@@ -70,7 +74,19 @@ const SafetySettings = () => {
     if (savedContacts) setContacts(JSON.parse(savedContacts));
 
     checkPermissions();
+    loadRecordings();
   }, []);
+
+  const loadRecordings = async () => {
+    const data = await audioStorage.getAllRecordings();
+    setRecordings(data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+  };
+
+  const deleteRecording = async (id: string) => {
+    await audioStorage.deleteRecording(id);
+    toast.success("Recording deleted");
+    loadRecordings();
+  };
 
   // 💾 Persist settings dynamically
   useEffect(() => {
@@ -388,6 +404,47 @@ Sent via Safety SOS System`
           <Play className="h-4 w-4" />
           Run Real-Time SOS Simulation (30s Tracking)
         </button>
+
+        {/* 🎙️ SOS AUDIO EVIDENCE */}
+        <div className="rounded-xl border border-border bg-card p-4">
+          <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
+            <Mic className="h-3 w-3" /> SOS Audio Evidence (IndexedDB)
+          </h4>
+
+          <div className="space-y-3">
+            {recordings.length === 0 && (
+              <p className="py-4 text-center text-xs text-muted-foreground italic">
+                No SOS recordings found. Evidence is automatically saved here when SOS is triggered.
+              </p>
+            )}
+
+            {recordings.map((rec) => (
+              <div key={rec.id} className="rounded-lg bg-muted/30 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-xs font-bold">{rec.id}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {new Date(rec.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                  <button onClick={() => deleteRecording(rec.id)} className="p-1 hover:bg-emergency/10 rounded">
+                    <Trash2 className="h-3.5 w-3.5 text-emergency" />
+                  </button>
+                </div>
+
+                <audio
+                  controls
+                  src={URL.createObjectURL(rec.blob)}
+                  className="h-8 w-full"
+                />
+              </div>
+            ))}
+          </div>
+
+          <p className="mt-4 text-[9px] text-muted-foreground italic text-center">
+            Evidence is stored locally in your browser's secure database (IndexedDB) and is not uploaded to any server.
+          </p>
+        </div>
 
         <div className="flex items-start gap-2 rounded-lg bg-warning/5 px-3 py-2">
           <AlertTriangle className="mt-0.5 h-3 w-3 text-warning" />

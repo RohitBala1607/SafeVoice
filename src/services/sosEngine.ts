@@ -1,5 +1,7 @@
 import { toast } from "sonner";
 
+import { audioStorage } from "@/lib/audio-storage";
+
 interface SafetyConfig {
   sosEnabled: boolean;
   stealthMode: boolean;
@@ -16,6 +18,8 @@ interface EmergencyContact {
 }
 
 let trackingInterval: any = null;
+let mediaRecorder: MediaRecorder | null = null;
+let audioChunks: Blob[] = [];
 
 export const startSOS = async () => {
   const defaultConfig: SafetyConfig = {
@@ -158,8 +162,30 @@ const startLiveTracking = (institution: string, config: SafetyConfig) => {
 const startAudioRecording = async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+
+    mediaRecorder.ondataavailable = (event) => {
+      audioChunks.push(event.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+      const victimId = localStorage.getItem("user_id") || "VICTIM-UNKNOWN";
+
+      await audioStorage.saveRecording({
+        id: `SOS-${Date.now()}`,
+        blob: audioBlob,
+        timestamp: new Date().toISOString(),
+        victimId
+      });
+
+      console.log("💾 SOS Audio Persistent in IndexedDB");
+      toast.success("Evidence Saved", { description: "SOS Audio recording stored securely." });
+    };
+
+    mediaRecorder.start();
     console.log("🎙️ Audio recording started (SOS Mode)");
-    // You can integrate MediaRecorder here for saving audio
   } catch (error) {
     console.error("Microphone permission denied");
   }
@@ -170,6 +196,11 @@ export const stopSOS = () => {
     clearInterval(trackingInterval);
     trackingInterval = null;
   }
+
+  if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    mediaRecorder.stop();
+  }
+
   localStorage.removeItem("active_sos");
   window.dispatchEvent(new Event("storage"));
   console.log("🛑 SOS Stopped");
