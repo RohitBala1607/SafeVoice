@@ -7,4 +7,9 @@ router.post('/update', sosController.updateLocation);
 router.post('/resolve', sosController.resolveSOS);
 router.get('/track/:publicId', sosController.getPublicTracking);
 
+// Audio Upload Support
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/audio/' });
+router.post('/upload-audio', upload.single('audio'), sosController.uploadAudio);
+
 module.exports = router;

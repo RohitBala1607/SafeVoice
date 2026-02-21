@@ -1,10 +1,12 @@
+const fs = require('fs');
+const path = require('path');
 const SOSEvent = require('../models/SOSEvent');
 const { v4: uuidv4 } = require('uuid');
-const whatsappBridge = require('../utils/whatsappBridge');
+const smsBridge = require('../utils/smsBridge');
 
 exports.startSOS = async (req, res) => {
     try {
-        const { victimId, institution, location, mapsLink, contacts } = req.body;
+        const { victimId, institution, location, mapsLink } = req.body;
         const publicId = uuidv4().substring(0, 8); // Short readable ID
 
         const newEvent = new SOSEvent({
@@ -17,19 +19,51 @@ exports.startSOS = async (req, res) => {
 
         await newEvent.save();
 
-        // 📲 Trigger Automatic WhatsApp Alerts via Python Service
+        res.status(201).json({ success: true, publicId, message: "SOS Started. Waiting for audio..." });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+exports.uploadAudio = async (req, res) => {
+    try {
+        const { publicId, contacts: contactsRaw } = req.body;
+        const contacts = contactsRaw ? JSON.parse(contactsRaw) : [];
+        const audioFile = req.file;
+
+        if (!audioFile) {
+            return res.status(400).json({ message: "No audio file uploaded" });
+        }
+
+        const event = await SOSEvent.findOne({ publicId });
+        if (!event) return res.status(404).json({ message: "SOS event not found" });
+
+        // Rename and move file
+        const ext = '.webm';
+        const newFilename = `${publicId}_${Date.now()}${ext}`;
+        const newPath = path.join('uploads', 'audio', newFilename);
+        fs.renameSync(audioFile.path, newPath);
+
+        const audioUrl = `${process.env.BACKEND_URL || 'http://localhost:5000'}/uploads/audio/${newFilename}`;
+        event.evidenceUrl = audioUrl;
+        await event.save();
+
+        // 📲 Trigger Automatic SMS Alerts AFTER audio is received
         if (contacts && contacts.length > 0) {
             const liveTrackLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/sos-track/${publicId}`;
-            const alertMessage = `🚨 EMERGENCY ALERT 🚨\nI am in danger. Please help immediately!\n\n📍 Live Location:\n${mapsLink}\n\n(Real-time tracking started)\nTrack me live: ${liveTrackLink}\n\nSent via SafeVoice`;
+
+            // SMS is concise due to carrier limits
+            const alertMessage = `🚨 EMERGENCY ALERT!\nI am in danger. Please help!\n\n📍 Maps: ${event.mapsLink}\n\n🎙️ Audio: ${audioUrl}\n\n📡 Track: ${liveTrackLink}`;
 
             contacts.forEach(contact => {
-                whatsappBridge.sendWhatsAppAlert(contact.phone, alertMessage)
-                    .catch(err => console.error(`WhatsApp Alert Failed for ${contact.phone}:`, err));
+                smsBridge.sendSMSAlert(contact.phone, alertMessage)
+                    .catch(err => console.error(`SMS Alert Failed for ${contact.phone}:`, err));
             });
         }
 
-        res.status(201).json({ success: true, publicId, message: "SOS Session Started & Alerts Triggered" });
+        res.json({ success: true, audioUrl, message: "Audio saved and SMS alerts triggered" });
     } catch (err) {
+        console.error("Upload Error:", err);
         res.status(500).json({ success: false, message: err.message });
     }
 };

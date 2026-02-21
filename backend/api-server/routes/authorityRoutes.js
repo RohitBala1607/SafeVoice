@@ -4,9 +4,12 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Authority = require("../models/Authority");
 const authorityController = require("../controllers/authorityController");
+const { verifyAuthority } = require("../middleware/authMiddleware");
 
 // Oversight Analytics (Global POSH IC view)
-router.get("/oversight", authorityController.getOversightStats);
+router.get("/oversight", verifyAuthority, authorityController.getOversightStats);
+router.get("/institution/:institutionName/records", verifyAuthority, authorityController.getInstitutionRecords);
+router.get("/secure-records", verifyAuthority, authorityController.getAuthorityRecords);
 
 // 🔐 Authority Login (POSH IC)
 router.post("/login", async (req, res) => {

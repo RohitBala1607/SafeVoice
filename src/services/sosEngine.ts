@@ -37,9 +37,12 @@ export const startSOS = async () => {
     ...JSON.parse(localStorage.getItem("safety_config") || "{}")
   };
 
+  console.log("🛠️ SOS Config:", config);
+
   const contacts: EmergencyContact[] = JSON.parse(
     localStorage.getItem("emergency_contacts") || "[]"
   );
+  console.log("👥 SOS Contacts:", contacts);
 
   if (!config?.sosEnabled) {
     toast.error("SOS System Disabled", {
@@ -73,8 +76,7 @@ export const startSOS = async () => {
         victimId,
         institution,
         location: { lat, lng },
-        mapsLink,
-        contacts // Pass contacts for server-side automation
+        mapsLink
       });
 
       const { publicId } = sosResponse.data;
@@ -175,7 +177,9 @@ const startLiveTracking = (publicId: string) => {
 
 const startAudioRecording = async () => {
   try {
+    console.log("🎙️ Requesting microphone access...");
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    console.log("✅ Microphone access granted. Starting recorder...");
     mediaRecorder = new MediaRecorder(stream);
     audioChunks = [];
 
@@ -189,6 +193,7 @@ const startAudioRecording = async () => {
       const user = rawUser ? JSON.parse(rawUser) : null;
       const victimId = user?.victimId || user?.id || "VICTIM-UNKNOWN";
 
+      // 💾 Save locally
       await audioStorage.saveRecording({
         id: `SOS-${Date.now()}`,
         blob: audioBlob,
@@ -196,10 +201,38 @@ const startAudioRecording = async () => {
         victimId
       });
 
+      // 📤 Upload to Backend and Trigger Automated WhatsApp Alerts
+      if (currentPublicId) {
+        console.log("📤 Uploading SOS audio evidence to backend...");
+        const formData = new FormData();
+        formData.append("audio", audioBlob, `sos_${currentPublicId}.webm`);
+        formData.append("publicId", currentPublicId);
+
+        const contacts = localStorage.getItem("emergency_contacts") || "[]";
+        formData.append("contacts", contacts);
+
+        try {
+          await api.post('/sos/upload-audio', formData);
+          toast.success("Evidence Secured", { description: "Audio uploaded and emergency alerts sent." });
+        } catch (err) {
+          console.error("Failed to upload SOS audio:", err);
+          toast.error("Upload Failed", { description: "Audio saved locally, but backend sync failed." });
+        }
+      }
+
       toast.success("Evidence Saved", { description: "SOS Audio recording stored securely." });
     };
 
     mediaRecorder.start();
+    console.log("⏺️ Recording started (4s limit)...");
+
+    // 🕒 Auto-stop after 4 seconds
+    setTimeout(() => {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        console.log("⏱️ 4s limit reached. Stopping recorder...");
+        mediaRecorder.stop();
+      }
+    }, 4000);
   } catch (error) {
     console.error("Microphone permission denied");
   }

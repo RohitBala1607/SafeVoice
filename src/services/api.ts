@@ -3,8 +3,10 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const api = {
     async request(endpoint: string, options: RequestInit = {}) {
         const token = localStorage.getItem('token');
+        const isFormData = options.body instanceof FormData;
+
         const headers = {
-            'Content-Type': 'application/json',
+            ...(!isFormData ? { 'Content-Type': 'application/json' } : {}),
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             ...options.headers,
         } as Record<string, string>;
@@ -27,18 +29,20 @@ const api = {
     },
 
     post(endpoint: string, data: any, options?: RequestInit) {
+        const isFormData = data instanceof FormData;
         return this.request(endpoint, {
             ...options,
             method: 'POST',
-            body: JSON.stringify(data),
+            body: isFormData ? data : JSON.stringify(data),
         });
     },
 
     patch(endpoint: string, data: any, options?: RequestInit) {
+        const isFormData = data instanceof FormData;
         return this.request(endpoint, {
             ...options,
             method: 'PATCH',
-            body: JSON.stringify(data),
+            body: isFormData ? data : JSON.stringify(data),
         });
     },
 };
