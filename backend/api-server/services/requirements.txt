@@ -1,0 +1,4 @@
+pywhatkit
+selenium
+webdriver-manager
+python-dotenv
